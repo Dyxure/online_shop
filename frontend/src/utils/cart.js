@@ -1,0 +1,10 @@
+const SESSION_KEY = "sessionId";
+
+export const getSessionId = () => {
+  let id = localStorage.getItem(SESSION_KEY);
+  if (!id) {
+    id = crypto.randomUUID();
+    localStorage.setItem(SESSION_KEY, id);
+  }
+  return id;
+};

@@ -1,0 +1,455 @@
+openapi: 3.0.3
+info:
+  title: Shop MVP API
+  version: 1.0.0
+  description: |
+    REST API для MVP интернет-магазина одежды.
+
+    Базовый URL: `/api`.
+servers:
+  - url: http://localhost:5000/api
+    description: Local dev
+
+tags:
+  - name: Catalog
+    description: Каталог и справочники
+  - name: Cart
+    description: Корзина (привязка к sessionId)
+  - name: Orders
+    description: Заказы
+
+paths:
+  /products:
+    get:
+      tags: [Catalog]
+      summary: Получить список товаров (с вариантами)
+      parameters:
+        - in: query
+          name: categoryId
+          schema: { type: integer, minimum: 1 }
+          required: false
+          description: Фильтр по категории
+        - in: query
+          name: brandId
+          schema: { type: integer, minimum: 1 }
+          required: false
+          description: Фильтр по бренду
+        - in: query
+          name: sizeId
+          schema: { type: integer, minimum: 1 }
+          required: false
+          description: Фильтр по размеру (через variants)
+        - in: query
+          name: colorId
+          schema: { type: integer, minimum: 1 }
+          required: false
+          description: Фильтр по цвету (через variants)
+      responses:
+        "200":
+          description: Список товаров
+          content:
+            application/json:
+              schema:
+                type: array
+                items: { $ref: "#/components/schemas/Product" }
+        "500":
+          $ref: "#/components/responses/ServerError"
+
+  /products/{id}:
+    get:
+      tags: [Catalog]
+      summary: Получить товар по id (с вариантами)
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema: { type: integer, minimum: 1 }
+      responses:
+        "200":
+          description: Товар
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Product" }
+        "500":
+          $ref: "#/components/responses/ServerError"
+
+  /categories:
+    get:
+      tags: [Catalog]
+      summary: Получить категории
+      responses:
+        "200":
+          description: Список категорий
+          content:
+            application/json:
+              schema:
+                type: array
+                items: { $ref: "#/components/schemas/Category" }
+        "500":
+          $ref: "#/components/responses/ServerError"
+
+  /brands:
+    get:
+      tags: [Catalog]
+      summary: Получить бренды
+      responses:
+        "200":
+          description: Список брендов
+          content:
+            application/json:
+              schema:
+                type: array
+                items: { $ref: "#/components/schemas/Brand" }
+        "500":
+          $ref: "#/components/responses/ServerError"
+
+  /sizes:
+    get:
+      tags: [Catalog]
+      summary: Получить размеры
+      responses:
+        "200":
+          description: Список размеров
+          content:
+            application/json:
+              schema:
+                type: array
+                items: { $ref: "#/components/schemas/Size" }
+        "500":
+          $ref: "#/components/responses/ServerError"
+
+  /colors:
+    get:
+      tags: [Catalog]
+      summary: Получить цвета
+      responses:
+        "200":
+          description: Список цветов
+          content:
+            application/json:
+              schema:
+                type: array
+                items: { $ref: "#/components/schemas/Color" }
+        "500":
+          $ref: "#/components/responses/ServerError"
+
+  /cart:
+    get:
+      tags: [Cart]
+      summary: Получить корзину по sessionId (создаёт корзину при отсутствии)
+      parameters:
+        - in: query
+          name: sessionId
+          required: true
+          schema: { type: string, minLength: 1 }
+          description: Идентификатор сессии (хранится на клиенте)
+      responses:
+        "200":
+          description: Корзина и её позиции
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/CartResponse" }
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "500":
+          $ref: "#/components/responses/ServerError"
+
+  /cart/add:
+    post:
+      tags: [Cart]
+      summary: Добавить вариант товара в корзину (или увеличить количество)
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/CartAddRequest" }
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/OkResponse" }
+        "400":
+          description: Ошибка валидации/остатков
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/ErrorResponse" }
+        "500":
+          $ref: "#/components/responses/ServerError"
+
+  /cart/update:
+    post:
+      tags: [Cart]
+      summary: Изменить количество позиции корзины
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/CartUpdateRequest" }
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/OkResponse" }
+        "500":
+          $ref: "#/components/responses/ServerError"
+
+  /cart/remove:
+    post:
+      tags: [Cart]
+      summary: Удалить позицию из корзины
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/CartRemoveRequest" }
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/OkResponse" }
+        "500":
+          $ref: "#/components/responses/ServerError"
+
+  /orders:
+    get:
+      tags: [Orders]
+      summary: Получить список заказов
+      responses:
+        "200":
+          description: Список заказов (последние 100)
+          content:
+            application/json:
+              schema:
+                type: array
+                items: { $ref: "#/components/schemas/Order" }
+        "500":
+          $ref: "#/components/responses/ServerError"
+    post:
+      tags: [Orders]
+      summary: Оформить заказ из корзины sessionId
+      description: |
+        Операция выполняется транзакцией:
+        - блокирует позиции корзины (FOR UPDATE)
+        - проверяет остатки
+        - создаёт `orders` и `order_items`
+        - списывает `product_variants.stock`
+        - очищает корзину
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/OrderCreateRequest" }
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/OrderCreateResponse" }
+        "400":
+          description: Корзина пустая / нет остатков / неверные данные
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/ErrorResponse" }
+        "500":
+          $ref: "#/components/responses/ServerError"
+
+  /orders/{id}:
+    get:
+      tags: [Orders]
+      summary: Получить заказ по id (с позициями)
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema: { type: integer, minimum: 1 }
+      responses:
+        "200":
+          description: Заказ с позициями
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/OrderWithItems" }
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "404":
+          description: Не найден
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/ErrorResponse" }
+        "500":
+          $ref: "#/components/responses/ServerError"
+
+components:
+  responses:
+    BadRequest:
+      description: Bad Request
+      content:
+        application/json:
+          schema: { $ref: "#/components/schemas/ErrorResponse" }
+    ServerError:
+      description: Server error
+      content:
+        application/json:
+          schema: { $ref: "#/components/schemas/ErrorResponse" }
+
+  schemas:
+    OkResponse:
+      type: object
+      properties:
+        ok: { type: boolean, example: true }
+      required: [ok]
+
+    ErrorResponse:
+      type: object
+      properties:
+        error: { type: string, example: "Server error" }
+      required: [error]
+
+    Category:
+      type: object
+      properties:
+        id: { type: integer, example: 1 }
+        name: { type: string, example: "Футболки" }
+      required: [id, name]
+
+    Brand:
+      type: object
+      properties:
+        id: { type: integer, example: 1 }
+        name: { type: string, example: "Urban Line" }
+      required: [id, name]
+
+    Size:
+      type: object
+      properties:
+        id: { type: integer, example: 3 }
+        name: { type: string, example: "M" }
+      required: [id, name]
+
+    Color:
+      type: object
+      properties:
+        id: { type: integer, example: 1 }
+        name: { type: string, example: "Черный" }
+      required: [id, name]
+
+    Variant:
+      type: object
+      properties:
+        id: { type: integer, example: 10 }
+        sizeId: { type: integer, nullable: true, example: 3 }
+        size: { type: string, nullable: true, example: "M" }
+        colorId: { type: integer, nullable: true, example: 1 }
+        color: { type: string, nullable: true, example: "Черный" }
+        stock: { type: integer, example: 12 }
+      required: [id, stock]
+
+    Product:
+      type: object
+      properties:
+        id: { type: integer, example: 1 }
+        name: { type: string, example: "Футболка 1 Urban Line" }
+        description: { type: string, nullable: true }
+        price: { type: number, format: float, example: 1490.00 }
+        image: { type: string, nullable: true, example: "https://..." }
+        category_id: { type: integer, nullable: true, example: 1 }
+        category_name: { type: string, nullable: true, example: "Футболки" }
+        brand_id: { type: integer, nullable: true, example: 2 }
+        brand_name: { type: string, nullable: true, example: "Urban Line" }
+        variants:
+          type: array
+          items: { $ref: "#/components/schemas/Variant" }
+      required: [id, name, price, variants]
+
+    CartItem:
+      type: object
+      properties:
+        id: { type: integer, example: 1 }
+        variant_id: { type: integer, example: 12 }
+        quantity: { type: integer, example: 2 }
+        name: { type: string, example: "Футболка 1 Urban Line" }
+        price: { type: number, format: float, example: 1490.00 }
+        image: { type: string, nullable: true }
+        size: { type: string, nullable: true, example: "M" }
+        color: { type: string, nullable: true, example: "Черный" }
+        stock: { type: integer, example: 12 }
+      required: [id, variant_id, quantity, name, price]
+
+    CartResponse:
+      type: object
+      properties:
+        cartId: { type: integer, example: 1 }
+        items:
+          type: array
+          items: { $ref: "#/components/schemas/CartItem" }
+      required: [cartId, items]
+
+    CartAddRequest:
+      type: object
+      properties:
+        sessionId: { type: string, example: "c23b3a9b-2d53-4d17-9a49-6b2a8dbf1b6d" }
+        variantId: { type: integer, example: 10 }
+        qty: { type: integer, minimum: 1, example: 1 }
+      required: [sessionId, variantId]
+
+    CartUpdateRequest:
+      type: object
+      properties:
+        itemId: { type: integer, example: 1 }
+        qty: { type: integer, minimum: 1, example: 2 }
+      required: [itemId, qty]
+
+    CartRemoveRequest:
+      type: object
+      properties:
+        itemId: { type: integer, example: 1 }
+      required: [itemId]
+
+    Order:
+      type: object
+      properties:
+        id: { type: integer, example: 1 }
+        created_at: { type: string, format: date-time }
+        total: { type: number, format: float, example: 4990.00 }
+        status: { type: string, example: "new" }
+      required: [id, created_at, total, status]
+
+    OrderItem:
+      type: object
+      properties:
+        id: { type: integer, example: 1 }
+        variant_id: { type: integer, example: 10 }
+        price: { type: number, format: float, example: 1490.00 }
+        quantity: { type: integer, example: 2 }
+        name: { type: string, example: "Футболка 1 Urban Line" }
+        image: { type: string, nullable: true }
+        size: { type: string, nullable: true, example: "M" }
+        color: { type: string, nullable: true, example: "Черный" }
+      required: [id, variant_id, price, quantity, name]
+
+    OrderWithItems:
+      allOf:
+        - $ref: "#/components/schemas/Order"
+        - type: object
+          properties:
+            items:
+              type: array
+              items: { $ref: "#/components/schemas/OrderItem" }
+          required: [items]
+
+    OrderCreateRequest:
+      type: object
+      properties:
+        sessionId: { type: string, example: "c23b3a9b-2d53-4d17-9a49-6b2a8dbf1b6d" }
+      required: [sessionId]
+
+    OrderCreateResponse:
+      type: object
+      properties:
+        ok: { type: boolean, example: true }
+        orderId: { type: integer, example: 1 }
+        total: { type: number, format: float, example: 4990.00 }
+      required: [ok, orderId, total]
+
