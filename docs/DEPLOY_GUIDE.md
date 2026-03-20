@@ -124,5 +124,5 @@ npm run dev
 ## 6) Полезные ссылки в репозитории
 
 - **OpenAPI**: `openapi.yaml`
-- **Test plan (Cart)**: `docs/TEST_PLAN_CART.md`
-- **Test summary report**: `docs/TEST_SUMMARY_REPORT.md`
+- **Testing checklist (UI/functional/DB)**: `docs/TEST_CHECKLIST_UI_FUNCTIONAL_DB.md`
+- **Bug reports**: `docs/BUG_REPORTS.md`

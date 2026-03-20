@@ -389,7 +389,8 @@ components:
     CartAddRequest:
       type: object
       properties:
-        sessionId: { type: string, example: "c23b3a9b-2d53-4d17-9a49-6b2a8dbf1b6d" }
+        sessionId:
+          { type: string, example: "c23b3a9b-2d53-4d17-9a49-6b2a8dbf1b6d" }
         variantId: { type: integer, example: 10 }
         qty: { type: integer, minimum: 1, example: 1 }
       required: [sessionId, variantId]
@@ -442,7 +443,8 @@ components:
     OrderCreateRequest:
       type: object
       properties:
-        sessionId: { type: string, example: "c23b3a9b-2d53-4d17-9a49-6b2a8dbf1b6d" }
+        sessionId:
+          { type: string, example: "c23b3a9b-2d53-4d17-9a49-6b2a8dbf1b6d" }
       required: [sessionId]
 
     OrderCreateResponse:
@@ -452,4 +454,3 @@ components:
         orderId: { type: integer, example: 1 }
         total: { type: number, format: float, example: 4990.00 }
       required: [ok, orderId, total]
-
